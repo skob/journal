@@ -22,7 +22,7 @@ In case of multi-host journald installation (`man systemd-journal-remote`) you c
 
 ### Yes I know this
 * Yes, you can use `systemd-journal-gatewayd` instead
-~~* Yes, I use too old systemd python library maybe (this is Centos choice)~~
+* ~~Yes, I use too old systemd python library maybe (this is Centos choice)~~
 * Yes, feel free to open pull requests
 * Yes, you can't just "download and run". This is PoC project, right?
 * From docs:
