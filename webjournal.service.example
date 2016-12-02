@@ -1,0 +1,20 @@
+[Unit]
+Description=Journald online reader
+After=network.target
+
+[Service]
+User=systemd-journal-remote
+Group=systemd-journal-remote
+LimitNOFILE=65536
+Environment="VIRTUAL_ENV=/opt/journal" "PATH=/opt/journal/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+WorkingDirectory=/opt/journal
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectHome=yes
+ProtectSystem=full
+ExecStart=/opt/journal/bin/python2 /opt/journal/webjournal.py --directory=/var/log/journal/remote
+KillMode=control-group
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
