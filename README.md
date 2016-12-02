@@ -6,7 +6,7 @@ journald => web gateway
 It's not really good python code. I think this code is ugly. Don't use it , okay? (but of course you can)
 This is just PoC project!
 
-[scrn]: https://github.com/skob/journal/blob/master/screenshot.png ""
+![](https://github.com/skob/journal/blob/master/screenshot.png "")
 
 This project based on tornado, system-journald python module, bootstrap and select2. Big thanks to many (or maybe to all) users of SO for your help :-)
 
