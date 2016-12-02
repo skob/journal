@@ -163,7 +163,7 @@ class AjaxHandler(web.RequestHandler):
 
 def main():
     settings = {
-        'cookie_secret' : "OrTiV4Nj8eTy0GsQJE2KMrNVdVU"
+        'cookie_secret' : "__super_secret_string__"
     }
     handlers = [
             (r'/', MainHandler),
@@ -183,7 +183,7 @@ if __name__ == "__main__":
     define ("directory" , default = None, help="Directory of journals, usualy /var/log/journal/remote or empty for local journals", group="General")
     define ("ipaddr" , default = '127.0.0.1', help="ip address to bind to", group="General")
     define ("port" , default = 8888, help="port to bind to", group="General")
-    define ("UNITS_RE" , default = [ "^uml_" , "^ssh" ], help="list of regexps for filtering systemd units names", multiple=True, group="Filtering")
+    define ("UNITS_RE" , default = [ ".*" ], help="list of regexps for filtering systemd units names", multiple=True, group="Filtering")
     options.parse_command_line()
     generator = journalctl()
     publisher = DataSource(next(generator))
