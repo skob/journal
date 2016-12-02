@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Journalctl Online</title>
+  <link href="/static/css/bootstrap.css" rel="stylesheet">
+  <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+  <link href="/static/css/select2.min.css" rel="stylesheet">
+  <script src="/static/js/jquery.min.js"></script>
+  <script src="/static/js/bootstrap.min.js"></script>
+  <script src="/static/js/select2.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>Journal</h1>
+    <hr>
+    <div class="alert" role="alert" id="alertline">Click "Live" to start...</div>
+    <button type="button" id="startstop" class="btn btn-success">Live</button>
+    <select id="priority_selector">
+      <option></option>
+    </select>
+    <select id="host_selector">
+      <option></option>
+    </select>
+    <select id="sunit_selector">
+      <option></option>
+    </select>
+    <label class="checkbox-inline"><input type="checkbox" id="reversebox" onchange="reversemessages()">Last first</label>
+  <hr>
+  <div id="messages" style="width:100%; word-break: break-all;" ></div>
+  <hr>
+  </div>
+  <script type="text/javascript">
+  var sunit = "";
+  var host = "";
+  var priority = 8;
+  var live = false;
+  var priorities = [{ id: 0, text: 'Emergency', shorttext: 'emerge' }, 
+              { id: 1, text: 'Alert', shorttext: 'alert' },
+              { id: 2, text: 'Critical', shorttext: 'crit' },
+              { id: 3, text: 'Error', shorttext: 'err' },
+              { id: 4, text: 'Warning', shorttext: 'warn' },
+              { id: 5, text: 'Notice', shorttext: 'notice' },
+              { id: 6, text: 'Information', shorttext: 'info' },
+              { id: 7, text: 'Debug (all)', shorttext: 'debug' }];
+
+$(document).ready(function() {
+  $("#priority_selector").select2({
+    placeholder: "Priority", data: priorities, minimumResultsForSearch: Infinity,
+  });
+  $("#host_selector").select2({
+    ajax: {
+       url: '/get/host',
+       dataType: 'json',
+       contentType: "application/json; charset=utf-8",
+       data: function (params) {
+         return {
+           q: params.term, // search term
+           page: params.page
+         };
+       },
+
+       processResults: function (data, params) {
+         // parse the results into the format expected by Select2
+         // since we are using custom formatting functions we do not need to
+         // alter the remote JSON data, except to indicate that infinite
+         // scrolling can be used
+         params.page = params.page || 1;
+
+         return {
+           results: data.items,
+           pagination: {
+             more: (params.page * 30) < data.total_count
+           }
+         };
+       },
+       cache: true
+    },
+    templateResult: formatResult,
+    templateSelection: formatSelect,
+    escapeMarkup: function (markup) { return markup; },
+    placeholder: "Host",
+    allowClear: true,
+    minimumResultsForSearch: Infinity
+  });
+  $("#sunit_selector").select2({
+    placeholder: "System unit",
+    ajax: {
+       url: '/get/sunit',
+       dataType: 'json',
+       contentType: "application/json; charset=utf-8",
+       data: function (params) {
+         return {
+           q: params.term, // search term
+           page: params.page
+         };
+       },
+
+       processResults: function (data, params) {
+         // parse the results into the format expected by Select2
+         // since we are using custom formatting functions we do not need to
+         // alter the remote JSON data, except to indicate that infinite
+         // scrolling can be used
+         params.page = params.page || 1;
+   
+         return {
+           results: data.items,
+           pagination: {
+             more: (params.page * 30) < data.total_count
+           }
+         };
+       },
+       cache: true
+    },
+    templateResult: formatResult,
+    templateSelection: formatSelect,
+    escapeMarkup: function (markup) { return markup; },
+    allowClear: true,
+    minimumResultsForSearch: Infinity
+  });
+});
+
+  function formatResult (data) {
+    return data.name;
+  }
+  function formatSelect (data) {
+    return data.name;
+  }
+
+  function modify() {
+    $.ajax({
+        url: "/events",
+        type: "POST",
+        data: JSON.stringify ([{ "sunit": sunit , "host": host, "priority": priority }]),
+        dataType: "json",
+        contentType: "application/json; charset=utf-8"
+    });
+  }
+  function reversemessages() {
+    var text = $('#messages').html();
+    var newtext = text.split("<br>").reverse().join("<br>");
+    $('#messages').html(newtext + "<br>");
+  }
+  function stopstart() {
+      if (live) {
+         $("#alertline").removeClass().addClass( "alert alert-info" );
+         $("#alertline").text('Starting live...');
+         source = new EventSource('/events');
+         source.onmessage = function(message) {
+           $("#alertline").removeClass().addClass( "alert alert-success" );
+           $("#alertline").text('Live');
+           var text = $('#messages').html();
+           var data = JSON.parse(message.data)
+           let hostname = data.hostname;
+           let unit = data.unit;
+           let datetime = data.datetime;
+           let messagestring = data.message;
+           let priority = priorities[data.priority].shorttext;
+           let newline = `<span class='label label-default'>${hostname}</span> <span class='label label-info'>${unit}</span> <span class='label label-success'>${datetime}</span> <span class='label label-warning'>${priority}</span> <small>${messagestring}</small><br>`;
+           if ( $("#reversebox").is(":checked") ) {
+               text = newline + text;
+               $('#messages').html(text);
+           } else {
+               text = text + newline;
+               $('#messages').html(text);
+               if ($('#messages').html().split('<br>').length > 50) {
+                 var textareavalue = $('#messages').html().split("<br>");
+                 while (textareavalue.length > 50) {
+                   textareavalue.splice(0, 1) 
+                 };
+                 $('#messages').html(textareavalue.join("<br>"));
+                 if ( $("#reversebox").is(":not(:checked)") ) {
+                   window.scrollTo(0,document.body.scrollHeight);
+                 }
+               }
+           }
+         };
+         source.onerror = function(message) {
+             $("#alertline").removeClass().addClass( "alert alert-danger" );
+             $("#alertline").text('Live is failed');
+             $("#startstop").removeClass().addClass( "btn btn-success" );
+             $("#startstop").text("Live");
+             live = false;
+         };
+      } else {
+         source.close();
+         $("#alertline").removeClass().addClass( "alert alert-warning" );
+         $("#alertline").text('Live is stopped');
+         $("#startstop").removeClass().addClass( "btn btn-success" );
+         $("#startstop").text("Live");
+         live = false;
+      }
+  }
+  $("#startstop").click(function() {
+      if (live == true) {
+         $("#startstop").removeClass().addClass( "btn btn-success" );
+         $("#startstop").text("Live");
+         live = false;
+      } else {
+         $("#startstop").removeClass().addClass( "btn btn-danger" );
+         $("#startstop").text("Pause...");
+         live = true;
+      }
+      stopstart();
+  });
+  $("#priority_selector").change(function() {
+      priority = $("#priority_selector").val()
+      modify();
+  });
+  $("#host_selector").change(function() {
+      host = $("#host_selector").val()
+      modify();
+  });
+  $("#sunit_selector").change(function() {
+      sunit = $("#sunit_selector").val()
+      modify();
+  });
+  </script>
+</body>
+</html>
