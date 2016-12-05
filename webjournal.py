@@ -105,6 +105,7 @@ class EventSource(web.RequestHandler):
     def get(self):
         self.set_header('content-type', 'text/event-stream')
         self.set_header('cache-control', 'no-cache')
+        self.set_header('X-Accel-Buffering', 'no')
         while True:
             if self.source.data != self._last and \
                self.source.data and \
